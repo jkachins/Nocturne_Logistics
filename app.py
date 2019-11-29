@@ -1,23 +1,46 @@
 # app.py
 from flask import Flask, request, jsonify
+import os
+import redis
+from urllib.parse import urlparse
+import pandas_access as mdb
+
 app = Flask(__name__)
+url = urlparse(os.environ.get('REDISCLOUD_URL'))
+file_cache = redis.Redis(host=url.hostname, port=url.port, password=url.password)
 
 @app.route('/getmsg/', methods=['GET'])
 def respond():
+	
+    if not os.path.exists("Character.accdb"):
+        file_binary = file_cache.get("db")
+        #with open('Character.accdb', 'wb') as f:
+        #    f.write(file_binary)
+        newf = open("Character.accdb", "wb")
+        newf.write(file_binary)
+        newf.close()
+
+    query = '`Character Number` == %s'
+
     # Retrieve the name from url parameter
-    name = request.args.get("name", None)
+    idn = request.args.get("id", None)
 
     response = {}
 
     # Check if user sent a name at all
-    if not name:
-        response["ERROR"] = "no name found, please send a name."
+    if not idn:
+        response["ERROR"] = "no id found, please send id."
     # Check if the user entered a number not a name
-    elif str(name).isdigit():
-        response["ERROR"] = "name can't be numeric."
-    # Now the user entered a valid name
+    elif not str(idn).isdigit():
+        response["ERROR"] = "name must be numeric."
     else:
-        response["MESSAGE"] = f"Welcome {name} to our awesome platform!!"
+        df = mdb.read_table("Character.accdb", "Characters")
+        character = df.query(query%idn)
+        if character.empty:
+            response["ERROR"] = "No character for id %s"%idn
+        else:
+            response["name"] = character['Character Name'].values[0]
+            response["id"] = idn
 
     # Return the response in json format
     return jsonify(response)
