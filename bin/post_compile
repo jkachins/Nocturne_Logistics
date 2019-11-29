@@ -2,5 +2,5 @@
 
 echo 'My PostCompile Hook'
 
-python ../init_file.py
-mv Character.accdb ..
+rm -f Character.accdb
+python init_file.py
