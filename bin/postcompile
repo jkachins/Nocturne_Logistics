@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+
+python ../init_file.py
+mv Character.accdb ..
