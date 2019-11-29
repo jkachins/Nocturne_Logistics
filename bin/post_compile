@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+
+echo 'My PostCompile Hook'
+
+python ../init_file.py
+mv Character.accdb ..
