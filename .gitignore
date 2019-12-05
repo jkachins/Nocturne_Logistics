@@ -1,5 +1,7 @@
+__pycache__
 venv
 test.py
+*.csv
 *.accdb
 *.swp
 logs
