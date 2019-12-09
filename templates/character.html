@@ -1,0 +1,65 @@
+<html>
+<body>
+<p>Player Name: <u>PLAYER_TEMPLATE</u></p>
+<p>Character Name: <u>CHARACTER_TEMPLATE</u></p>
+<table>
+   <tbody>
+      <tr>
+         <td>
+            <p>Professions</p>
+            <table border="1">
+               <tbody>
+                  {% for skill in skills %}
+                  <tr>
+                     <td>
+                         <p>{{skill}}</p>
+                     </td>
+                  </tr>
+                  {% endfor %}
+               </tbody>
+            </table>
+         </td>
+         <td>
+            <p>Sub-Lists</p>
+            <table border="1">
+               <tbody>
+                  <tr>
+                     <td>
+                        <p>SUBLIST TEMPLATE</p>
+                     </td>
+                  </tr>
+               </tbody>
+            </table>
+         </td>
+         <td>
+            <p>Advanced Lists</p>
+            <table border="1">
+               <tbody>
+                  <tr>
+                     <td>
+                        <p>ADVANCED TEMPLATE</p>
+                     </td>
+                  </tr>
+               </tbody>
+            </table>
+         </td>
+      </tr>
+   </tbody>
+</table>
+<p><br />Skills</p>
+<table width="631">
+   <tbody>
+      <tr>
+         <td>
+            <p>Skill 1</p>
+         </td>
+         <td>Skill 2</td>
+         <td>Skill 3</td>
+         <td>Skill 4</td>
+      </tr>
+   </tbody>
+</table>
+<p>Notes</p>
+<p>NOTES_TEMPLATE</p>
+</body>
+</html>

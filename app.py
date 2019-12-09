@@ -1,10 +1,13 @@
 # app.py
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, Response
 import os
 import redis
 from urllib.parse import urlparse
 import pandas_access as mdb
 import csv
+import json
+from skill import Skill
+
 
 app = Flask(__name__)
 app.debug = True
@@ -48,23 +51,74 @@ def get_character_from_csv(idn):
 
 
 def clean_character_dict(character):
-    skill_list = [v for (k,v) in character.items() if v and k.startswith('Skill name')]
-    character['Skill List'] = skill_list 
-    year_stuff(character)
-    return {k:v for (k,v) in character.items() if v and not k.startswith('Skill name')}
+    c = character.copy()
+    skill_stuff(c)
+    build_stuff(c)
+    genetic_stuff(c)
+    player_stuff(c)
+    return c
 
+
+def add_to_character_library(library, list_name, n):
+    l = file_cache.get("LIST: " + list_name)
+    if not l:
+        return
+    skills = json.loads(l)
+    for skill in skills:
+        s = Skill.from_dict(skill)
+        library[s.get_name(n)] = list_name
+        
 
 #TODO (kachinsk): Consolidate the stuff functions into one so we don't have to iterate
 #over the character dictionary repeatedly
-def genetic_stuff(character):
-    genetic_keys = ["PowerB", "PowerO", "VigorB", "VigorO", "MannaB", "MannaB", "EssenceB", "EssenceO"]
-    for k in genetic_keys:
-        pass
+def skill_stuff(character):
+    skill_library = file_cache.hgetall("Skills") 
+    delete_keys = [k for (k,v) in character.items() if k.startswith("Skill name")]
+    character_skills = [v for (k,v) in character.items() if v and k.startswith('Skill name')]
+    character_skill_map = {}
+    character_skill_library= {}
 
-def year_stuff(character):
+    for n in range(1, 6):
+        profession = "Profession" + str(n)
+        if not character[profession]:
+            break
+        add_to_character_library(character_skill_library, character[profession], n)
+    if character["Advanced1"]:
+        add_to_character_library(character_skill_library, character["Advanced1"], 1)
+    add_to_character_library(character_skill_library, "Common", 1)
+    add_to_character_library(character_skill_library, character["Race"], 1) 
+    
+    for skill in character_skills:
+        character_skill_map.setdefault(character_skill_library.get(skill.strip(), "Unknown"), []).append(skill)
+    character["Skills"] = character_skill_map
+
+    for k in delete_keys:
+        del character[k]
+
+
+def genetic_stuff(character):
+    genetic_keys = ["PowerB", "PowerO", "VigorB", "VigorO", "MannaB", "MannaO", "EssenceB", "EssenceO"]
+    genetics = {}
+    for k in genetic_keys:
+        if k[-1:] == 'B':
+            new_key = k[:-1] + " Bought"
+        elif k[-1:] == 'O':
+            new_key = "Total " + k[:-1]
+        genetics[new_key] = character[k]
+        del character[k]
+    character["Genetics"] = genetics
+
+def player_stuff(character):
+    player_keys = ["Medical Information", "E-mail Address", "Emergency Contact", "Player Name"]
+    player = {}
+    _move_keys(player_keys, character, player)
+    character["Player Info"] = player
+
+def build_stuff(character):
     if not character["Date Created"]:
         return
     build_bought = {}
+    year_build = {}
     to_delete = []
     year_created = int(character["Date Created"].split(" ")[1])
     for (k,v) in character.items(): 
@@ -72,12 +126,20 @@ def year_stuff(character):
             continue
         can_buy_year = k[-4:].isdigit() and int(k[-4:]) >= year_created
         if can_buy_year:
-            build_bought[k] = v
+            year_build[k] = v
         to_delete.append(k)
     for key in to_delete:
-        del character[key] 
-    character["Year Build"] = build_bought
+        del character[key]
+    extra_keys = ["Build Spent", "10 Year Anniversary", "Build Bought", "Service Build", "Total Build", \
+            "Unspent Build", "Camp Cleanup 1", "Camp Cleanup 2", "Camp Cleanup 3"]
+    _move_keys(extra_keys, character, build_bought)
+    character["Build Info"] = build_bought
     
+def _move_keys(keys, origin, dest):
+    for k in keys:
+        if k in origin:
+            dest[k] = origin[k]
+            del origin[k]
 
 @app.route('/getmsg/', methods=['GET'])
 def respond():
@@ -112,6 +174,9 @@ def respond():
         else:
             response["ERROR"] = "No character for id %s"%idn        
 
+    #return Response(json.dumps(response), 
+    #        mimetype='application/json',
+    #        headers={'Content-Disposition':'attachment;filename=character.json'})
     return jsonify(response)
 
 @app.route('/post/', methods=['POST'])
